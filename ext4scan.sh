@@ -79,13 +79,13 @@ until [ "$block" == "$lastblock" ]; do
 			sed 's/^[0-9]*.//' > tempmanifest
 		echo "Files that use FS blocks ${block}-${next}:"
 		cat tempmanifest
+		#merge tempmanifest and manifest, then eliminate duplicates and resort
+		cat manifest >> tempmanifest
+		uniq tempmanifest | sort > manifest
 	else
 		echo "Nothing found in this block range"
 	fi
 
-	#merge tempmanifest and manifest, then eliminate duplicates and resort
-	cat manifest >> tempmanifest
-	uniq tempmanifest | sort > manifest
 	block=${next}
 done
 cp manifest ${OLDDIR}/manifest
