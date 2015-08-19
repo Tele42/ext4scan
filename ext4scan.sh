@@ -67,28 +67,29 @@ until [ "$block" == "$lastblock" ]; do
 	debugfs $target -f cmdset | grep 'marked' | awk '{print $2}' \
 		> blocklist
 
+	rm cmdset
 	cat blocklist | while read line; do
 		echo "block marked in use: ${line}"
 		echo "icheck ${line}" >> cmdset
 	done
 	rm blocklist
-
-	debugfs $target -f cmdset | grep -v '[a-zA-Z]' | awk '{print $2}' | \
-		uniq > inodelist
-
-	rm cmdset
-	cat inodelist | while read line; do
-		echo "inode found: ${line}"
-		echo "ncheck ${line}" >> cmdset
-	done
-	rm inodelist
-
 	if [ -e cmdset ]; then
+		debugfs $target -f cmdset 2>/dev/null | grep -v '[a-zA-Z]' | \
+			awk '{print $2}' | uniq > inodelist
+
+		rm cmdset
+		cat inodelist | while read line; do
+			echo "inode found: ${line}"
+			echo "ncheck ${line}" >> cmdset
+		done
+		rm inodelist
+
 		debugfs $target -f cmdset | grep "^[0-9]" | \
 			sed 's/^[0-9]*.//' > tempmanifest
 		echo "Files that use FS blocks ${block}-${next}:"
 		cat tempmanifest
-		#merge tempmanifest and manifest, then eliminate duplicates and resort
+		# merge tempmanifest and manifest, then eliminate duplicates 
+		# and resort
 		cat manifest >> tempmanifest
 		uniq tempmanifest | sort > manifest
 	else
