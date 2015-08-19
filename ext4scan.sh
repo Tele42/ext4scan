@@ -61,8 +61,17 @@ until [ "$block" == "$lastblock" ]; do
 	fi
 	for i in `seq $[block] $[next]`
 	do
-		echo "icheck ${i}" >> cmdset
+		echo "testb ${i}" >> cmdset
 	done
+
+	debugfs $target -f cmdset | grep 'marked' | awk '{print $2}' \
+		> blocklist
+
+	cat blocklist | while read line; do
+		echo "block marked in use: ${line}"
+		echo "icheck ${line}" >> cmdset
+	done
+	rm blocklist
 
 	debugfs $target -f cmdset | grep -v '[a-zA-Z]' | awk '{print $2}' | \
 		uniq > inodelist
