@@ -40,6 +40,10 @@ if [ "$4" == "" ]; then
 else
 	span=$4
 fi
+if [ "$5" == "trust_block_bitmap" ]; then
+	echo "WARNING: Block bitmap is enabled, it is fast but unreliable"
+	TRUST_BLOCK_BITMAP=1
+fi
 
 OLDDIR=$PWD
 #this working dir should be a tmpfs mount
@@ -56,23 +60,31 @@ until [ "$block" == "$lastblock" ]; do
 	fi
 
 	echo "Processing ${block}-${next}"
-	if [ -e cmdset ]; then
-		rm cmdset
-	fi
 	for i in `seq $[block] $[next]`
 	do
 		echo "testb ${i}" >> cmdset
 	done
 
-	debugfs $target -f cmdset | grep 'marked' | awk '{print $2}' \
-		> blocklist
+	if [ TRUST_BLOCK_BITMAP == "1" ]; then
+		debugfs $target -f cmdset | grep 'marked' | awk '{print $2}' \
+			> blocklist
 
-	rm cmdset
-	cat blocklist | while read line; do
-		echo "block marked in use: ${line}"
-		echo "icheck ${line}" >> cmdset
-	done
-	rm blocklist
+		rm cmdset
+		cat blocklist | while read line; do
+			echo "block marked in use: ${line}"
+			echo "icheck ${line}" >> cmdset
+		done
+		rm blocklist
+	else
+		debugfs $target -f cmdset | grep 'marked' | \
+			awk '{print "block marked in use: "$2}'
+		rm cmdset
+		for i in `seq $[block] $[next]`
+		do
+			echo "icheck ${i}" >> cmdset
+		done
+	fi
+	
 	if [ -e cmdset ]; then
 		debugfs $target -f cmdset 2>/dev/null | grep -v '[a-zA-Z]' | \
 			awk '{print $2}' | uniq > inodelist
@@ -83,7 +95,9 @@ until [ "$block" == "$lastblock" ]; do
 			echo "ncheck ${line}" >> cmdset
 		done
 		rm inodelist
-
+	fi
+	
+	if [ -e cmdset ]; then
 		debugfs $target -f cmdset | grep "^[0-9]" | \
 			sed 's/^[0-9]*.//' > tempmanifest
 		echo "Files that use FS blocks ${block}-${next}:"
@@ -96,6 +110,7 @@ until [ "$block" == "$lastblock" ]; do
 		echo "Nothing found in this block range"
 	fi
 
+	rm cmdset
 	block=${next}
 done
 cp manifest ${OLDDIR}/manifest
