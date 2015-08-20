@@ -47,7 +47,7 @@ fi
 
 OLDDIR=$PWD
 #this working dir should be a tmpfs mount
-rm -r /run/ext4scan
+rm -rf /run/ext4scan
 mkdir /run/ext4scan
 cd /run/ext4scan
 
