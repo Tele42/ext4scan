@@ -106,11 +106,11 @@ until [ "$block" -gt "$lastblock" ]; do
 		# and resort
 		cat manifest >> tempmanifest
 		uniq tempmanifest | sort > manifest
+		rm cmdset
 	else
 		echo "Nothing found in this block range"
 	fi
 
-	rm cmdset
 	block=$(($[next] + 1))
 done
 cp manifest ${OLDDIR}/manifest
