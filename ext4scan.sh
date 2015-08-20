@@ -51,7 +51,7 @@ mkdir /run/ext4scan
 rm /run/ext4scan/*
 cd /run/ext4scan
 
-until [ "$block" == "$lastblock" ]; do
+until [ "$block" -gt "$lastblock" ]; do
 	if [ $(($[block] + $[span])) -gt $[lastblock] ]
 	then
 		next=$[lastblock]
@@ -111,7 +111,7 @@ until [ "$block" == "$lastblock" ]; do
 	fi
 
 	rm cmdset
-	block=${next}
+	block=$(($[next] + 1))
 done
 cp manifest ${OLDDIR}/manifest
 echo "File manifest can be found at ${OLDDIR}/manifest"
