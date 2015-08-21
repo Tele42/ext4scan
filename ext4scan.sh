@@ -104,8 +104,7 @@ until [ "$block" -gt "$lastblock" ]; do
 		cat tempmanifest
 		# merge tempmanifest and manifest, then eliminate duplicates 
 		# and resort
-		cat manifest >> tempmanifest
-		cat tempmanifest | sort | uniq > manifest
+		cat manifest tempmanifest | sort | uniq > manifest
 		rm cmdset
 	else
 		echo "Nothing found in this block range"
