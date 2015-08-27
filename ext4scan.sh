@@ -65,7 +65,7 @@ until [ "$block" -gt "$lastblock" ]; do
 		echo "testb ${i}" >> cmdset
 	done
 
-	if [ TRUST_BLOCK_BITMAP == "1" ]; then
+	if [ ${TRUST_BLOCK_BITMAP} == "1" ]; then
 		debugfs $target -f cmdset | grep 'marked' | awk '{print $2}' \
 			> blocklist
 
