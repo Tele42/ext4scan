@@ -54,7 +54,7 @@ fi
 
 if [ "$4" == "" ]; then
 	span=1024
-elseif [ "$4" -gt 0 ]
+elif [ "$4" -gt 0 ]; then
 	span=$[4]
 else
 	echo "span is not supported"
@@ -65,7 +65,7 @@ OLDDIR=$PWD
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
-if [ ! -f "${OLDDIR}/ext4scanv1" ]
+if [ ! -f "${OLDDIR}/ext4scanv1" ]; then
 	echo "ext4scanv1 not found. Aborting"
 	exit 1
 fi
@@ -135,10 +135,9 @@ get_filename_from_inode()
 		((blockline++))
 		count="${line%% *}"
 		currentline="${line#* }"
-		if [ "$(wc -w <<< $currentline)" != "$count" || \
+		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ ]\
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
-			echo "
 			#sleep if there are too many offloaded threads
 			while [ $(pgrep -c ext4scanv1) -gt ${MAX_THREAD:=4} ]
 			do
