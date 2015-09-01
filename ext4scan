@@ -23,6 +23,9 @@
 # this should be a tmpfs mount
 WORKDIR="/run/ext4scan"
 
+#how often to force blocks to be checked
+check_in_range=64
+
 if [ "$2" == "" ]; then
 	echo "Usage: target start [last] [span]"
 	exit 1
@@ -105,7 +108,7 @@ find_range_from_list()
 			if [ "$first" == "$last" ]; then
 				echo $first
 			else
-				echo $first $last
+				echo $(seq $first $check_in_range $last) $last
 			fi
 			first=$line; last=$line
 		else
