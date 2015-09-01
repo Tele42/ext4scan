@@ -23,7 +23,7 @@ if ! tune2fs -l $target ; then
 fi
 
 if [ "$3" == "end" ]; then
-	lastblock=$(tune2fs -l $target | grep "Block coun" | awk '{print $3}')
+	lastblock=$(tune2fs -l $target | grep "Block c" | awk '{print $3}')
 elif [ "$3" == "" ]; then
 	lastblock=$block
 else
@@ -40,16 +40,15 @@ if [ "$4" == "" ]; then
 else
 	span=$4
 fi
-if [ "$5" == "trust_block_bitmap" ]; then
-	echo "WARNING: Block bitmap is enabled, it is fast but unreliable"
-	TRUST_BLOCK_BITMAP=1
-fi
 
-OLDDIR=$PWD
 #this working dir should be a tmpfs mount
-rm -rf /run/ext4scan
-mkdir /run/ext4scan
-cd /run/ext4scan
+WORKDIR="/run/ext4scan"
+if [ ! -d "$WORKDIR" ]; then
+	mkdir "$WORKDIR"
+fi
+rm -rf "${WORKDIR}/$$"
+mkdir "${WORKDIR}/$$"
+cd "${WORKDIR}/$$"
 
 until [ "$block" -gt "$lastblock" ]; do
 	if [ $(($[block] + $[span])) -gt $[lastblock] ]
@@ -60,33 +59,29 @@ until [ "$block" -gt "$lastblock" ]; do
 	fi
 
 	echo "Processing ${block}-${next}"
-	for i in `seq $[block] $[next]`
-	do
-		echo "testb ${i}" >> cmdset
-	done
-
-	if [ ${TRUST_BLOCK_BITMAP} == "1" ]; then
+	if [ ${IGNORE_BLOCK_BITMAP} == "1" ]; then
+		rm cmdset
+		for i in `seq $[block] $[CHECK_EVERY] $[next]`
+		do
+			echo "icheck ${i}" >> cmdset
+		done
+	else
+		for i in `seq $[block] $[next]`
+		do
+			echo "testb ${i}" >> cmdset
+		done
 		debugfs $target -f cmdset | grep 'marked' | awk '{print $2}' \
 			> blocklist
 
 		rm cmdset
 		cat blocklist | while read line; do
-			echo "block marked in use: ${line}"
 			echo "icheck ${line}" >> cmdset
 		done
 		rm blocklist
-	else
-		debugfs $target -f cmdset | grep 'marked' | \
-			awk '{print "block marked in use: "$2}'
-		rm cmdset
-		for i in `seq $[block] $[next]`
-		do
-			echo "icheck ${i}" >> cmdset
-		done
 	fi
-	
+
 	if [ -e cmdset ]; then
-		debugfs $target -f cmdset 2>/dev/null | grep -v '[a-zA-Z]' | \
+		debugfs $target -f cmdset | grep -v '[a-zA-Z]' | \
 			awk '{print $2}' | uniq > inodelist
 
 		rm cmdset
@@ -96,16 +91,16 @@ until [ "$block" -gt "$lastblock" ]; do
 		done
 		rm inodelist
 	fi
-	
+
 	if [ -e cmdset ]; then
 		debugfs $target -f cmdset | grep "^[0-9]" | \
 			sed 's/^[0-9]*.//' > tempmanifest
 		echo "Files that use FS blocks ${block}-${next}:"
 		cat tempmanifest
-		# merge tempmanifest and manifest, then eliminate duplicates 
+		# merge tempmanifest and manifest, then eliminate duplicates
 		# and resort
 		cat manifest >> tempmanifest
-		cat tempmanifest | sort | uniq > manifest
+		cat tempmanifest | sort -u > manifest
 		rm cmdset
 	else
 		echo "Nothing found in this block range"
@@ -113,5 +108,11 @@ until [ "$block" -gt "$lastblock" ]; do
 
 	block=$(($[next] + 1))
 done
-cp manifest ${OLDDIR}/manifest
-echo "File manifest can be found at ${OLDDIR}/manifest"
+
+if [ -e manifest ]
+	mv manifest "${WORKDIR}/manifest_$$"
+	echo "File manifest can be found at ${WORKDIR}/manifest_$$"
+else
+	echo "No files found in this run"
+fi
+rm -rf "${WORKDIR}/$$"
