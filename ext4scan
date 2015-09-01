@@ -189,6 +189,7 @@ until [ "$block" -gt "$lastblock" ]; do
 	find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
 		-exec sort -u {} > manifest \; -exec rm {} \;
 
+	unset blocklist range inodelist filelist
 	block=$(($[block]+$[next]))
 done
 
