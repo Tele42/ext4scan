@@ -59,7 +59,7 @@ until [ "$block" -gt "$lastblock" ]; do
 	fi
 
 	echo "Processing ${block}-${next}"
-	if [ "{$IGNORE_BLOCK_BITMAP}" == "1" ]; then
+	if [ "${IGNORE_BLOCK_BITMAP}" == "1" ]; then
 		rm cmdset
 		for i in `seq $[block] $[CHECK_EVERY] $[next]`
 		do
