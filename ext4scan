@@ -143,8 +143,7 @@ get_filename_from_inode()
 			do
 				sleep 30
 			done
-			#get nth line of blocklist with blockline
-			blockrange=$(echo "$blocklist" | sed -n ${blockline}p)
+			blockrange=$(echo "$range" | sed -n ${blockline}p)
 			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
 				${blockrange#* } &
 		else
