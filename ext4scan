@@ -170,7 +170,7 @@ until [ "$block" -gt "$lastblock" ]; do
 		next=$span
 	fi
 
-	echo "Processing $block-$(($[block]+$[next])):"
+	echo "Processing $block-$(($[block]+$[next]-1)):"
 	blocklist=$(get_blocklist $block $next)
 	if [ -n "$blocklist" ]; then
 		range=$(find_range_from_list "$blocklist")
