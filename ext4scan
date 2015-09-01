@@ -112,7 +112,7 @@ find_range_from_list()
 			fi
 			first=$line; last=$line
 		else
-			: $((last++))
+			((last++))
 		fi
 	done
 }
@@ -135,7 +135,7 @@ get_filename_from_inode()
 		((blockline++))
 		count="${line%% *}"
 		currentline="${line#* }"
-		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ ]\
+		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ \
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
 			#sleep if there are too many offloaded threads
@@ -146,7 +146,7 @@ get_filename_from_inode()
 			#get nth line of blocklist with blockline
 			blockrange=$(echo "$blocklist" | sed -n ${blockline}p)
 			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
-				${blockrange#* }
+				${blockrange#* } &
 		else
 			echo "ncheck ${currentline%% *}" >> cmdset
 		fi
@@ -162,6 +162,7 @@ get_filename_from_inode()
 # main loop #
 #############
 
+touch manifest
 until [ "$block" -gt "$lastblock" ]; do
 	if [ $(($[block] + $[span])) -gt $[lastblock] ]
 	then
@@ -172,13 +173,12 @@ until [ "$block" -gt "$lastblock" ]; do
 
 	echo "Processing $block-$(($[block]+$[next])):"
 	blocklist=$(get_blocklist $block $next)
-	if [ -n $blocklist ]; then
-		range=$(find_range_from_list $blocklist)
+	if [ -n "$blocklist" ]; then
+		range=$(find_range_from_list "$blocklist")
 		echo "$range" | tr ' ' '-' | tr '\n' ','
-
-		inodelist=$(get_inode_from_list $range)
-		if [ -n $inodelist ]; then
-			filelist=$(get_filename_from_inode $inodelist)
+		inodelist=$(get_inode_from_list "$range")
+		if [ -n "$inodelist" ]; then
+			filelist=$(get_filename_from_inode "$inodelist")
 			echo "Files in this range:\n$filelist"
 			echo "$filelist" > tempmanifest
 			cat manifest >> tempmanifest
@@ -188,8 +188,8 @@ until [ "$block" -gt "$lastblock" ]; do
 		echo "This range is empty"
 	fi
 
-	find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
-		-exec sort -u {} > manifest \; -exec rm {} \;
+	find $WORKDIR -name "manifest_*" -exec sh -c \
+		"cat manifest >> {}; sort -u {} > manifest; rm {}" \;
 
 	unset blocklist range inodelist filelist
 	block=$(($[block]+$[next]))
@@ -198,9 +198,9 @@ done
 while [ $(pgrep -c ext4scanv1) -gt 0 ]
 do
 	sleep 30
-	find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
-		-exec sort -u {} > manifest \; -exec rm {} \;
+	find $WORKDIR -name "manifest_*" -exec sh -c \
+		"cat manifest >> {}; sort -u {} > manifest; rm {}" \;
 done
-find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
-	-exec sort -u {} > manifest \; -exec rm {} \;
+find $WORKDIR -name "manifest_*" -exec sh -c \
+	"cat manifest >> {}; sort -u {} > manifest; rm {}" \;
 echo "File manifest can be found at: ${WORKDIR}/manifest"
