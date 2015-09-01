@@ -145,7 +145,7 @@ get_filename_from_inode()
 			done
 			blockrange=$(echo "$range" | sed -n ${blockline}p)
 			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
-				${blockrange#* } &
+				${blockrange##* } &
 		else
 			echo "ncheck ${currentline%% *}" >> cmdset
 		fi
