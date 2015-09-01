@@ -55,7 +55,7 @@ fi
 if [ "$4" == "" ]; then
 	span=1024
 elif [ "$4" -gt 0 ]; then
-	span=$[4]
+	span="$4"
 else
 	echo "span is not supported"
 	exit 1
