@@ -175,11 +175,12 @@ until [ "$block" -gt "$lastblock" ]; do
 	blocklist=$(get_blocklist $block $next)
 	if [ -n "$blocklist" ]; then
 		range=$(find_range_from_list "$blocklist")
-		echo "$range" | tr ' ' '-' | tr '\n' ','
+		echo "$range" | tr ' ' '-'
 		inodelist=$(get_inode_from_list "$range")
 		if [ -n "$inodelist" ]; then
 			filelist=$(get_filename_from_inode "$inodelist")
-			echo "Files in this range:\n$filelist"
+			echo "Files in this range:"
+			echo "$filelist"
 			echo "$filelist" > tempmanifest
 			cat manifest >> tempmanifest
 			sort -u tempmanifest > manifest
