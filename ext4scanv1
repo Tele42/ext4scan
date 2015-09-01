@@ -61,10 +61,7 @@ until [ "$block" -gt "$lastblock" ]; do
 	echo "Processing ${block}-${next}"
 	if [ "${IGNORE_BLOCK_BITMAP}" == "1" ]; then
 		rm cmdset
-		for i in `seq $[block] $[CHECK_EVERY] $[next]`
-		do
-			echo "icheck ${i}" >> cmdset
-		done
+		echo "icheck" `seq $[block] $[CHECK_EVERY] $[next]` >> cmdset
 	else
 		for i in `seq $[block] $[next]`
 		do
@@ -74,9 +71,7 @@ until [ "$block" -gt "$lastblock" ]; do
 			> blocklist
 
 		rm cmdset
-		cat blocklist | while read line; do
-			echo "icheck ${line}" >> cmdset
-		done
+		echo "icheck" `cat blocklist | tr "\n" " "` >> cmdset
 		rm blocklist
 	fi
 
