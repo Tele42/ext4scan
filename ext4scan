@@ -1,0 +1,203 @@
+#!/bin/bash
+#WARNING: This script requires superuser level commands to complete, please
+#         read my code carefully and confirm it is safe. It is provided AS-IS
+#         with no warranty implied or otherwise. Feel free to use this in any
+#         MIT-friendly way.
+
+# This script uses filesystem blocks which usually do not match physical
+# blocks, and is offset by the partition start block. In theory, this should
+# work with any filesystem that debugfs returns sane results for icheck and
+# ncheck. Span is for segmenting very large block ranges.
+
+# The assumption is made if the start and end of a sequential range of blocks
+# in a span match inodes, then there's a good chance it is the same file for
+# all the blocks in the range. To disable this assumption set the env variable
+# CHECK_ALL_BLOCKS=1 (Potentially severe performance).
+# Also, IGNORE_BLOCK_BITMAP and CHECK_EVERY can be used together if the block
+# bitmap is damaged or missing.
+
+########
+# init #
+########
+
+# this should be a tmpfs mount
+WORKDIR="/run/ext4scan"
+
+if [ "$2" == "" ]; then
+	echo "Usage: target start [last] [span]"
+	exit 1
+fi
+target=$1
+block=$2
+
+#check if target is a valid filesystem
+if ! tune2fs -l $target ; then
+	echo "${target} does not have a valid filesystem"
+	exit 1
+fi
+
+if [ "$3" == "end" ]; then
+	lastblock=$(tune2fs -l $target | grep "Block c" | awk '{print $3}')
+elif [ "$3" == "" ]; then
+	lastblock=$block
+else
+	lastblock=$3
+fi
+
+if [ $[block] -gt $[lastblock] ]; then
+	echo "Start block is after last block!"
+	exit 1
+fi
+
+if [ "$4" == "" ]; then
+	span=1024
+elseif [ "$4" -gt 0 ]
+	span=$[4]
+else
+	echo "span is not supported"
+	exit 1
+fi
+
+OLDDIR=$PWD
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
+
+if [ ! -f "${OLDDIR}/ext4scanv1" ]
+	echo "ext4scanv1 not found. Aborting"
+	exit 1
+fi
+
+###########
+# support #
+###########
+
+#$1 is a fs block, $2 is the number of blocks in this span
+get_blocklist()
+{
+	local i
+	for i in `seq $[1] $[2]`
+	do
+		echo "testb $1 $2" >> cmdset
+	done
+
+	#bypass bitmap block and allow user to set how often to check
+	if [ "$IGNORE_BLOCK_BITMAP" == "1" ]; then
+		for i in `seq $[1] $[CHECK_EVERY] $[2]`
+		do
+			echo "${i}"
+		done
+	else
+		debugfs $target -f cmdset | grep 'marked' | awk '{print $2}'
+	fi
+	rm cmdset
+}
+
+find_range_from_list()
+{
+	local line first last
+	echo "$1" | while read line; do
+		if [ -z $first ]; then
+			first=$line
+			last=$line
+			continue
+		fi
+		if [ "$line" != $(($[last] + 1)) ]; then
+			if [ "$first" == "$last" ]; then
+				echo $first
+			else
+				echo $first $last
+			fi
+			first=$line; last=$line
+		else
+			: $((last++))
+		fi
+	done
+}
+
+get_inode_from_list()
+{
+	local line
+	echo "$1" | while read line; do
+		echo "icheck $line" >> cmdset
+		echo $(wc -w <<< $line) $(debugfs $target -f cmdset | \
+			grep -v '[a-zA-Z]' | awk '{print $2}')
+		rm cmdset
+	done
+}
+
+get_filename_from_inode()
+{
+	local count currentline blockline=0 blockrange
+	echo "$1" | while read line; do
+		((blockline++))
+		count="${line%% *}"
+		currentline="${line#* }"
+		if [ "$(wc -w <<< $currentline)" != "$count" || \
+			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
+			-gt 1 ]; then
+			echo "
+			#sleep if there are too many offloaded threads
+			while [ $(pgrep -c ext4scanv1) -gt ${MAX_THREAD:=4} ]
+			do
+				sleep 30
+			done
+			#get nth line of blocklist with blockline
+			blockrange=$(echo "$blocklist" | sed -n ${blockline}p)
+			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
+				${blockrange#* }
+		else
+			echo "ncheck ${currentline%% *}" >> cmdset
+		fi
+	done
+
+	if [ -e cmdset ]; then
+		debugfs $target -f cmdset | grep "^[0-9]" | sed 's/^[0-9]*.//'
+		rm cmdset
+	fi
+}
+
+#############
+# main loop #
+#############
+
+until [ "$block" -gt "$lastblock" ]; do
+	if [ $(($[block] + $[span])) -gt $[lastblock] ]
+	then
+		next=$(($[lastblock] - $[block]))
+	else
+		next=$span
+	fi
+
+	echo "Processing $block-$(($[block]+$[next])):"
+	blocklist=$(get_blocklist $block $next)
+	if [ -n $blocklist ]; then
+		range=$(find_range_from_list $blocklist)
+		echo "$range" | tr ' ' '-' | tr '\n' ','
+
+		inodelist=$(get_inode_from_list $range)
+		if [ -n $inodelist ]; then
+			filelist=$(get_filename_from_inode $inodelist)
+			echo "Files in this range:\n$filelist"
+			echo "$filelist" > tempmanifest
+			cat manifest >> tempmanifest
+			sort -u tempmanifest > manifest
+		fi
+	else
+		echo "This range is empty"
+	fi
+
+	find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
+		-exec sort -u {} > manifest \; -exec rm {} \;
+
+	block=$(($[block]+$[next]))
+done
+
+while [ $(pgrep -c ext4scanv1) -gt 0 ]
+do
+	sleep 30
+	find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
+		-exec sort -u {} > manifest \; -exec rm {} \;
+done
+find $WORKDIR -name "manifest_*" -exec cat manifest >> {} \; \
+	-exec sort -u {} > manifest \; -exec rm {} \;
+echo "File manifest can be found at: ${WORKDIR}/manifest"
