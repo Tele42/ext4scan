@@ -139,7 +139,7 @@ get_filename_from_inode()
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
 			#sleep if there are too many offloaded threads
-			while [ $(pgrep -c ext4scanv1) -gt ${MAX_THREAD:=4} ]
+			while [ ! $(pgrep -c ext4scanv1) -lt ${MAX_THREAD:=4} ]
 			do
 				sleep 30
 			done
