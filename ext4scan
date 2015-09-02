@@ -165,7 +165,7 @@ touch manifest
 until [ "$block" -gt "$lastblock" ]; do
 	if [ $(($[block] + $[span])) -gt $[lastblock] ]
 	then
-		next=$(($[lastblock] - $[block]))
+		next=$(($[lastblock] - $[block] + 1))
 	else
 		next=$span
 	fi
