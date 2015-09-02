@@ -26,6 +26,10 @@ WORKDIR="/run/ext4scan"
 #how often to force blocks to be checked
 check_in_range=64
 
+#how many spans with at least one inode in it to do a filename lookup
+spans_per_lookup=16
+current_span=0
+
 if [ "$2" == "" ]; then
 	echo "Usage: target start [last] [span]"
 	exit 1
@@ -128,9 +132,11 @@ get_inode_from_list()
 	done
 }
 
-get_filename_from_inode()
+
+
+compare_inodelist()
 {
-	local count currentline blockline=0 blockrange
+	local line count currentline blockline=0 blockrange
 	echo "$1" | while read line; do
 		((blockline++))
 		count="${line%% *}"
@@ -147,10 +153,14 @@ get_filename_from_inode()
 			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
 				${blockrange##* } &>/dev/null &
 		else
-			echo "ncheck ${currentline%% *}" >> cmdset
+			echo "${currentline%% *}"
 		fi
 	done
+}
 
+get_filename()
+{
+	echo "ncheck" $(echo "$1" | xargs -n1 | sort -u) >> cmdset
 	if [ -e cmdset ]; then
 		debugfs $target -f cmdset | grep "^[0-9]" | sed 's/^[0-9]*.//'
 		rm cmdset
@@ -166,6 +176,7 @@ until [ "$block" -gt "$lastblock" ]; do
 	if [ $(($[block] + $[span])) -gt $[lastblock] ]
 	then
 		next=$(($[lastblock] - $[block] + 1))
+		lastspan=1
 	else
 		next=$span
 	fi
@@ -179,13 +190,21 @@ until [ "$block" -gt "$lastblock" ]; do
 		inodelist=$(get_inode_from_list "$range")
 		echo "Inodes in this range:"
 		echo "${inodelist#* }" | xargs -n1 | sort -u
-		if [ -n "$inodelist" ]; then
-			filelist=$(get_filename_from_inode "$inodelist")
-			echo "Files in this range:"
-			echo "$filelist"
-			echo "$filelist" > tempmanifest
-			cat manifest >> tempmanifest
-			sort -u tempmanifest > manifest
+		if [ -n "$inodelist" ] || [ "$lastspan" == "1" ]; then
+			inodeshortlist=$(echo "$inodeshortlist"; \
+				compare_inodelist "$inodelist")
+			((current_span++))
+			if [ $[current_span] -ge $[spans_per_lookup] ] || \
+				[ "$lastspan" == "1" ]; then
+				filelist=$(get_filename "$inodeshortlist")
+				echo "Files in the last $current_span ranges:"
+				echo "$filelist"
+				echo "$filelist" > tempmanifest
+				cat manifest >> tempmanifest
+				sort -u tempmanifest > manifest
+				current_span=0
+				unset filelist inodeshortlist
+			fi
 		fi
 	else
 		echo "This range is empty"
@@ -194,7 +213,7 @@ until [ "$block" -gt "$lastblock" ]; do
 	find $WORKDIR -name "manifest_*" -exec sh -c \
 		"cat manifest >> {}; sort -u {} > manifest; rm {}" \;
 
-	unset blocklist range inodelist filelist
+	unset blocklist range inodelist
 	block=$(($[block]+$[next]))
 done
 
