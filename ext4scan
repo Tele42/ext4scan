@@ -174,8 +174,11 @@ until [ "$block" -gt "$lastblock" ]; do
 	blocklist=$(get_blocklist $block $next)
 	if [ -n "$blocklist" ]; then
 		range=$(find_range_from_list "$blocklist")
+		echo "Blocks to be checked:"
 		echo "$range" | tr ' ' '-'
 		inodelist=$(get_inode_from_list "$range")
+		echo "Inodes in this range:"
+		echo "${inodelist#* }" | xargs -n1 | sort -u
 		if [ -n "$inodelist" ]; then
 			filelist=$(get_filename_from_inode "$inodelist")
 			echo "Files in this range:"
