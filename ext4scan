@@ -179,8 +179,8 @@ until [ "$block" -gt "$lastblock" ]; do
 
 	echo "Processing $block-$(($[block]+$[next]-1)):"
 	blocklist=$(get_blocklist $block $next; echo -1)
-	if [ -n "$blocklist" ]; then
-		range=$(find_range_from_list "$blocklist")
+	range=$(find_range_from_list "$blocklist")
+	if [ -n "$range" ]; then
 		echo "Blocks to be checked:"
 		echo "$range" | tr ' ' '-'
 		inodelist=$(get_inode_from_list "$range")
