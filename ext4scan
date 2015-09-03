@@ -58,7 +58,7 @@ fi
 
 if [ "$4" == "" ]; then
 	span=1024
-elif [ "$4" -gt 0 ] && [ "$4" -lt 4097 ]; then
+elif [ "$4" -gt 0 ]; then
 	span="$4"
 else
 	echo "span is not supported"
