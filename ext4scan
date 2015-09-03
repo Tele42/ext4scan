@@ -128,8 +128,6 @@ get_inode_from_list()
 	done
 }
 
-
-
 compare_inodelist()
 {
 	local line count currentline blockline=0 blockrange
