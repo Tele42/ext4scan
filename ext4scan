@@ -82,21 +82,17 @@ fi
 get_blocklist()
 {
 	local i
-	for i in `seq $[1] $[2]`
-	do
-		echo "testb $1 $2" >> cmdset
-	done
-
 	#bypass bitmap block and allow user to set how often to check
 	if [ "$IGNORE_BLOCK_BITMAP" == "1" ]; then
-		for i in `seq $[1] $[CHECK_EVERY] $[2]`
+		for i in `seq $[1] $[CHECK_EVERY] $(($[1]+$[2]))`
 		do
 			echo "${i}"
 		done
 	else
+		echo "testb $1 $2" > cmdset
 		debugfs $target -f cmdset | grep 'marked' | awk '{print $2}'
+		rm cmdset
 	fi
-	rm cmdset
 }
 
 find_range_from_list()
@@ -182,7 +178,7 @@ until [ "$block" -gt "$lastblock" ]; do
 	fi
 
 	echo "Processing $block-$(($[block]+$[next]-1)):"
-	blocklist=$(get_blocklist $block $next)
+	blocklist=$(get_blocklist $block $next; echo -1)
 	if [ -n "$blocklist" ]; then
 		range=$(find_range_from_list "$blocklist")
 		echo "Blocks to be checked:"
