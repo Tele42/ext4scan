@@ -138,14 +138,14 @@ compare_inodelist()
 		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ \
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
+			blockrange=$(echo "$range" | sed -n ${blockline}p)
+			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
+				${blockrange##* } &>/dev/null &
 			#sleep if there are too many offloaded threads
 			while [ $(pgrep -c ext4scanv1) -ge ${MAX_THREAD:=4} ]
 			do
 				sleep 30
 			done
-			blockrange=$(echo "$range" | sed -n ${blockline}p)
-			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
-				${blockrange##* } &>/dev/null &
 		else
 			echo "${currentline%% *}"
 		fi
