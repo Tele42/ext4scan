@@ -183,7 +183,7 @@ until [ "$block" -gt "$lastblock" ]; do
 		echo "$range" | tr ' ' '-'
 		inodelist=$(get_inode_from_list "$range")
 		echo "Inodes in this range:"
-		echo "${inodelist#* }" | xargs -n1 | sort -u
+		echo "$inodelist" | cut -d ' ' -f 2- | xargs -n1 | sort -u
 		if [ -n "$inodelist" ] || [ "$lastspan" == "1" ]; then
 			inodeshortlist=$(echo "$inodeshortlist"; \
 				compare_inodelist "$inodelist")
