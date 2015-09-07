@@ -135,7 +135,7 @@ compare_inodelist()
 		((blockline++))
 		count="${line%% *}"
 		currentline="${line#* }"
-		if [ "${count}" == "${currentline}" ]; then
+		if [ "${line}" == "${currentline}" ]; then
 			currentline=""
 		fi
 		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ \
