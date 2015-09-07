@@ -135,6 +135,9 @@ compare_inodelist()
 		((blockline++))
 		count="${line%% *}"
 		currentline="${line#* }"
+		if [ "${count}" == "${currentline}" ]; then
+			currentline=""
+		fi
 		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ \
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
