@@ -135,10 +135,7 @@ compare_inodelist()
 		((blockline++))
 		count="${line%% *}"
 		currentline="${line#* }"
-		if [ "${line}" == "${currentline}" ]
-			&& [ "$IGNORE_BLOCK_BITMAP" != "1" ]; then
-			continue
-		elif [ "$(wc -w <<< $currentline)" != "$count" ] || [ \
+		if [ "$(wc -w <<< $currentline)" != "$count" ] || [ \
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
 			blockrange=$(echo "$range" | sed -n ${blockline}p)
