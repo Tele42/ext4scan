@@ -183,9 +183,10 @@ until [ "$block" -gt "$lastblock" ]; do
 		echo "$range" | tr ' ' '-'
 		inodelist=$(get_inode_from_list "$range")
 		echo "Inodes in this range:"
-		echo "$inodelist" | cut -s -d ' ' -f 2- | xargs -n1 | sort -u
 		if [ -n "$(echo "$inodelist" | cut -s -d ' ' -f 2- )" ] \
 			|| [ "$lastspan" == "1" ]; then
+			echo "$inodelist" | cut -s -d ' ' -f 2- | xargs -n1 \
+				| sort -u
 			inodeshortlist=$(echo "$inodeshortlist"; \
 				compare_inodelist "$inodelist")
 			((current_span++))
@@ -200,6 +201,8 @@ until [ "$block" -gt "$lastblock" ]; do
 				current_span=0
 				unset filelist inodeshortlist
 			fi
+		else
+			echo "No inodes found"
 		fi
 	else
 		echo "This range is empty"
