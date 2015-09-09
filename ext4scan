@@ -128,9 +128,25 @@ get_inode_from_list()
 	done
 }
 
+shorten_span()
+{
+	local line last currentsample=0
+	echo $1 | xargs -n1 | while read line; do
+		if [ -z $last ]; then
+			last=$line
+			continue
+		fi
+		((currentsample++))
+		if [ "$line" != "$last" ]; then
+			echo $currentsample
+			last=$line
+		fi
+	done
+}
 compare_inodelist()
 {
 	local line count currentline blockline=0 blockrange
+	local shortspan shortend blockstart blockend
 	echo "$1" | while read line; do
 		((blockline++))
 		count="${line%% *}"
@@ -139,8 +155,18 @@ compare_inodelist()
 			"$(echo $currentline | xargs -n1 | sort -u | wc -w)" \
 			-gt 1 ]; then
 			blockrange=$(echo "$range" | sed -n ${blockline}p)
-			"${OLDDIR}/ext4scanv1" $target ${blockrange%% *} \
-				${blockrange##* } &>/dev/null &
+			if [ "$(wc -w <<< $currentline)" != "$count" ]; then
+				blockstart=${blockrange%% *}
+				blockend=${blockrange##* }
+			else
+				shortspan=($(shorten_span "$currentline"))
+				blockstart=$(echo "$blockrange" | cut -d ' ' \
+					-f${shortspan[0]} )
+				blockend=$(echo "$blockrange" | cut -d ' ' \
+					-f$((${shortspan[-1]} + 1)) )
+			fi
+			"${OLDDIR}/ext4scanv1" $target $blockstart \
+				$blockend &>/dev/null &
 			#sleep if there are too many offloaded threads
 			while [ $(pgrep -c ext4scanv1) -ge ${MAX_THREAD:=4} ]
 			do
