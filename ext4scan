@@ -146,7 +146,7 @@ shorten_span()
 compare_inodelist()
 {
 	local line count currentline blockline=0 blockrange
-	local shortspan shortend blockstart blockend
+	local shortspan blockstart blockend
 	echo "$1" | while read line; do
 		((blockline++))
 		count="${line%% *}"
