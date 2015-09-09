@@ -163,7 +163,7 @@ compare_inodelist()
 				blockstart=$(echo "$blockrange" | cut -d ' ' \
 					-f${shortspan[0]} )
 				blockend=$(echo "$blockrange" | cut -d ' ' \
-					-f$((${shortspan[-1]} + 1)) )
+					-f$((${shortspan[@]:(-1)} + 1)) )
 			fi
 			"${OLDDIR}/ext4scanv1" $target $blockstart \
 				$blockend &>/dev/null &
