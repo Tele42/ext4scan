@@ -24,7 +24,7 @@
 WORKDIR="/run/ext4scan"
 
 #how often to force blocks to be checked
-check_in_range=64
+check_in_range=32
 
 #how many spans with at least one inode in it to do a filename lookup
 spans_per_lookup=16
@@ -170,7 +170,7 @@ compare_inodelist()
 			#sleep if there are too many offloaded threads
 			while [ $(pgrep -c ext4scanv1) -ge ${MAX_THREAD:=4} ]
 			do
-				sleep 30
+				sleep 10
 			done
 		else
 			echo "${currentline%% *}"
