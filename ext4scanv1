@@ -23,7 +23,8 @@ if ! tune2fs -l $target ; then
 fi
 
 if [ "$3" == "end" ]; then
-	lastblock=$(tune2fs -l $target | grep "Block c" | awk '{print $3}')
+	lastblock=$(( $(tune2fs -l $target | grep "Block c" | \
+		awk '{print $3}') - 1 ))
 elif [ "$3" == "" ]; then
 	lastblock=$block
 else
